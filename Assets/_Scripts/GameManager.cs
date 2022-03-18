@@ -3,48 +3,145 @@ using UnityEngine;
 
 public class GameManager : Singleton<GameManager>
 {
-    private List<GameObject> spArr;
+    private List<GameObject> cellArr;
+    private List<GameObject> ballArr;
     private const int NUM_TILES_PER_COL = 9;
+    private string[] BallHexColorArr = {
+        "#ff0000",  //red
+        "#0000ff",  //blue
+        "#008000",  //green
+        "#00ffff",  //cyan
+        "#ffff00",  //yellow
+        "#8b4513"   //brown
+    };
 
-    // Start is called before the first frame update
+    public enum GameState { Initial, Standby, NewGame, Playing, GameOver };
+    public GameState gameState = GameState.Initial;
+
     void Start()
     {
-        spArr = new List<GameObject>();
-
-        //init gui programmatically
-        for (int i = 0; i < NUM_TILES_PER_COL; i++)
-        {
-            for (int j = 0; j < NUM_TILES_PER_COL; j++)
-            {
-                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cube.name = "cube" + ((j + 1) + (i * NUM_TILES_PER_COL));
-                //cube.transform.position = new Vector3(0, 0.5f, 0);
-
-                //GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-
-                //GameObject sp = Instantiate(spritePrefab, new Vector3(0, 0, 0), Quaternion.identity) as GameObject;
-                //string name = "spriteTile" + ((j + 1) + (i * NUM_TILES_PER_COL));
-                //sp.name = name;
-                //float w = sp.GetComponent<SpriteRenderer>().bounds.size.x;
-                //float h = sp.GetComponent<SpriteRenderer>().bounds.size.y;
-                //float x = 1;
-                //float y = 1;
-                ////if (j > 0) x = j + w;
-                ////if (i > 0) y = i + h;
-                //if (j > 0) x = j + w;
-                //if (i > 0) y = i + h;
-
-
-                //sp.transform.position = new Vector3(x, y, 0);
-                //spArr.Add(sp);
-            }
-        }
+        cellArr = new List<GameObject>();
+        ballArr = new List<GameObject>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        GameLoop();
         InputHandler();
+    }
+
+    void GameLoop()
+    {
+        switch (gameState)
+        {
+            case GameState.Initial:
+                initGUI();
+                break;
+            case GameState.Standby:
+                //waiting for user start
+                break;
+            case GameState.NewGame:
+                NewGame();
+                break;
+            case GameState.Playing:
+                //process logic
+                break;
+            case GameState.GameOver:
+                break;
+        }
+    }
+
+    void OnGameObjectClicked(GameObject go)
+    {
+        Debug.Log("name is: " + go.name);
+    }
+
+    void NewGame()
+    {
+        //first start => genenate: 7 big balls, 3 small balls
+        for (int i = 0; i < 10; i++)
+        {
+            //balls
+            GameObject ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            ball.GetComponent<Collider>().enabled = false;
+            ball.AddComponent<Ball>().SetBallColor(ball, RandomBallColor());
+
+            //get Cell position
+            GameObject cell = cellArr[RandomBallPosition()];
+            float x = cell.transform.position.x;
+            float y = cell.transform.position.y;
+
+            ball.transform.position = new Vector3(x, y, -5);
+            ball.name = "ball" + (i + 1);
+            ballArr.Add(ball);
+
+            if (i > 6)
+            {
+                ball.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            }
+        }
+        //SetBallColor(ball, Random.Range(0, 6));
+        gameState = GameState.Playing;
+    }
+
+    void EndTurn()
+    {
+
+    }
+
+    void AddNewScore()
+    {
+
+    }
+
+    void GameOver()
+    {
+
+    }
+
+    string RandomBallColor()
+    {
+        return BallHexColorArr[Random.Range(0, 6)];
+    }
+
+    int RandomBallPosition()
+    {
+        if (cellArr.Count > 0)
+        {
+            return Random.Range(0, cellArr.Count);
+        }
+        return 0;
+    }
+
+    void initGUI()
+    {
+        //init gui programmatically
+        for (int i = 0; i < NUM_TILES_PER_COL; i++)
+        {
+            for (int j = 0; j < NUM_TILES_PER_COL; j++)
+            {
+                //tile cells
+                GameObject cell = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                cell.name = "cell" + ((j + 1) + (i * NUM_TILES_PER_COL));
+                float w = cell.GetComponent<Renderer>().bounds.size.x;
+                float h = cell.GetComponent<Renderer>().bounds.size.y;
+                float x = (w * (j * 1.1f)) + 1;
+                float y = (h * (i * 1.1f)) + 1;
+                cell.transform.position = new Vector3(x, y, 0);
+                cellArr.Add(cell);
+            }
+        }
+
+        GameObject boardBg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        boardBg.name = "BoardBg";
+        boardBg.GetComponent<Renderer>().material.color = Color.grey;
+        boardBg.transform.position = new Vector3(5, 5, 10);
+        boardBg.transform.localScale += new Vector3(20, 20, 1);
+        boardBg.GetComponent<Collider>().enabled = false;
+
+        //gameState = GameState.Standby;
+        gameState = GameState.NewGame;
     }
 
     void InputHandler()
@@ -76,7 +173,7 @@ public class GameManager : Singleton<GameManager>
                 if (hit.collider != null)
                 {
                     GameObject go = hit.collider.gameObject;
-                    Debug.Log(go.name);
+                    OnGameObjectClicked(go);
                 }
             }
         }
