@@ -1,28 +1,23 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using GameAI.PathFinding;
+using System.Collections;
 
 public class GameManager : Singleton<GameManager>
 {
-    private const int NUM_TILES_PER_COL = 9;
+    private const int CELL_PER_ROWS = 9;
     private const int TOTAL_CELLS = 81;
     private List<Cell> cellArr;
     private List<Ball> ballArr;
     private int[] selectRoute = new int[] { -1, -1 }; //{start id, end id}
-    //private int ccid = -1; //clicked cell id
     private Cell clickcell;
+    private int[,] map = new int[9, 9];
 
-    /*
-     * 0:   emtpy
-     * 1:   small ball
-     * 2:   big ball
-     * 3:   user ball-xy choice
-     */
+    private enum GameState { Initial, Standby, NewGame, Playing, CheckMove, GameOver };
+    private GameState gameState;
 
-    public enum GameState { Initial, Standby, NewGame, Playing, CheckMove, GameOver };
-    public GameState gameState;
-
-    public enum PlayerTurnState { Thinking, BallSelected, DestSelected, CheckMove };
-    public PlayerTurnState playerTurnState;
+    private enum PlayerTurnState { Thinking, BallSelected, DestSelected, CheckMove };
+    private PlayerTurnState playerTurnState;
 
     void Start()
     {
@@ -51,6 +46,11 @@ public class GameManager : Singleton<GameManager>
             case GameState.Playing:
                 Playing();
                 break;
+            case GameState.CheckMove:
+                Debug.Log("Check Move!");
+                //CheckMove();
+                gameState = GameState.Playing;
+                break;
             case GameState.GameOver:
                 gameState = GameState.Standby;
                 break;
@@ -60,7 +60,6 @@ public class GameManager : Singleton<GameManager>
     void NewGame()
     {
         selectRoute = new int[] { -1, -1 };
-        //ccid = -1;
         clickcell = null;
 
         //first start => genenate: 7 big balls, 3 small balls
@@ -81,7 +80,7 @@ public class GameManager : Singleton<GameManager>
                         ball.SetSmall(0.5f);
                     }
 
-                    Debug.Log("mpos: " + (mpos + 1));
+                    //Debug.Log("mpos: " + (mpos + 1));
 
                     Cell cell = cellArr[mpos];
                     cell.AttachBall(ball);
@@ -89,6 +88,15 @@ public class GameManager : Singleton<GameManager>
                 }
             }
         }
+
+        //generate new map
+        //for (int i = 0; i < CELL_PER_ROWS; i++)
+        //{
+        //    for (int j = 0; j < TOTAL_CELLS; j++)
+        //    {
+        //        map[i, j] = 0;
+        //    }
+        //}
 
         gameState = GameState.Playing;
         playerTurnState = PlayerTurnState.Thinking;
@@ -102,13 +110,13 @@ public class GameManager : Singleton<GameManager>
         //add new score
         if (clickcell != null)
         {
-            clickcell.SetColor(Color.grey);
             switch (playerTurnState)
             {
                 case PlayerTurnState.Thinking:
                     if (clickcell.HasBall() && (!clickcell.ball.isSmall))    //user clicks a ball
                     {
                         selectRoute[0] = clickcell.id;
+                        clickcell.SetColor(Color.grey);
                         clickcell = null;
                         playerTurnState = PlayerTurnState.BallSelected;
                         Debug.Log("ball-id: " + selectRoute[0]);
@@ -121,7 +129,7 @@ public class GameManager : Singleton<GameManager>
                         {
                             selectRoute[1] = clickcell.id;
                             Debug.Log("destination!!!");
-                            clickcell = null;
+                            clickcell.SetColor(Color.grey);
                             playerTurnState = PlayerTurnState.DestSelected;
                             break;
                         }
@@ -131,6 +139,7 @@ public class GameManager : Singleton<GameManager>
                             {
                                 cellArr[selectRoute[0]].SetColor(Color.white);
                                 selectRoute[0] = clickcell.id;
+                                clickcell.SetColor(Color.grey);
                                 clickcell = null;
                                 Debug.Log("new ball-id: " + selectRoute[0]);
                                 playerTurnState = PlayerTurnState.BallSelected;
@@ -141,20 +150,178 @@ public class GameManager : Singleton<GameManager>
 
                     break;
                 case PlayerTurnState.DestSelected:
-                    CheckMove();
+                    clickcell = null;
                     gameState = GameState.CheckMove;
-                    Debug.Log("Check Move!");
+                    playerTurnState = PlayerTurnState.Thinking;
                     break;
             }
         }
 
     }
 
-
-
-    void CheckMove()
+    int[] CheckMove()
     {
+        int[,] Data = new int[2, 2];
+        int[] SmallData;
+        int[] bfs;
+        int[] ans = new int[9];
+        for (int i = 0; i < 9; i++)
+        {
+            int[] ans2 = new int[2] { i, 0 };
 
+            for (int j = 1; j < 10; j++)
+            {
+                if (Data[i, j] == Data[i, j - 1] && Data[i, j - 1] != 0)
+                {
+                    ans2[0] = i;
+                    ans2[1] = j;
+                }
+                else
+                {
+                    if (ans2.GetLength(0) >= 5)
+                    {
+                        //ans = ans.concat(ans2);
+                    }
+                    ans2[0] = i;
+                    ans2[1] = j;
+                }
+            }
+        }
+
+        for (int j = 0; j < 9; j++)
+        {
+            int[] ans2 = new int[2] { 0, j };
+            for (int i = 1; i < 10; i++)
+            {
+                if (Data[i, j] == Data[i, j - 1] && Data[i, j - 1] != 0)
+                {
+                    ans2[0] = i;
+                    ans2[1] = j;
+                }
+                else
+                {
+                    if (ans2.GetLength(0) >= 5)
+                    {
+                        //ans = ans.concat(ans2);
+                    }
+                    ans2[0] = i;
+                    ans2[1] = j;
+                }
+            }
+        }
+
+        for (int j = 0; j < 9; j++)
+        {
+            int[] ans2 = new int[2] { 0, j };
+            int J = j;
+            int I = 0;
+            do
+            {
+                I++;
+                J++;
+                if (Data[I, J] == Data[I - 1, J - 1] && Data[I - 1, J - 1] != 0)
+                {
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+                else
+                {
+                    if (ans2.GetLength(0) >= 5)
+                    {
+                        //ans = ans.concat(ans2);
+                    }
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+            } while (I > 0);//while (isPoint(I, J));
+            ans2[0] = j;
+            ans2[1] = 0;
+            J = 0;
+            I = j;
+            do
+            {
+                I++;
+                J++;
+                if (Data[I, J] == Data[I - 1, J - 1] && Data[I - 1, J - 1] != 0)
+                {
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+                else
+
+                {
+                    if (ans2.GetLength(0) >= 5)
+                    {
+                        Debug.Log(ans2);
+                        //ans = ans.concat(ans2);
+                    }
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+            } while (I > 0);// (this.isPoint(I, J));
+        }
+
+        for (int j = 0; j < 9; j++)
+        {
+            int[] ans2 = new int[2] { 0, j };
+            int J = j;
+            int I = 0;
+            do
+            {
+                I++;
+                J--;
+                if (Data[I, J] == Data[I - 1, J - 1] && Data[I - 1, J - 1] != 0)
+                {
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+                else
+                {
+                    if (ans2.GetLength(0) >= 5)
+                    {
+                        //ans = ans.concat(ans2);
+                    }
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+            } while (I > 0);// (this.isPoint(I, J)) ;
+
+            ans2 = new int[2] { j, 8 };
+            J = 8;
+            I = j;
+            do
+            {
+                I++;
+                J--;
+                if (Data[I, J] == Data[I - 1, J - 1] && Data[I - 1, J - 1] != 0)
+                {
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+                else
+                {
+                    if (ans2.GetLength(0) >= 5)
+                    {
+                        Debug.Log(ans2);
+                        //ans = ans.concat(ans2);
+                    }
+                    ans2[0] = I;
+                    ans2[1] = J;
+                }
+            } while (this.isPoint(I, J));
+        }
+
+        //return ans;
+        return null;
+    }
+
+    public bool isPoint(int x, int y)
+    {
+        if (x < 0 || x > 8 || y < 0 || y > 8)
+        {
+            return false;
+        }
+        return true;
     }
 
     void GameOver()
@@ -186,14 +353,14 @@ public class GameManager : Singleton<GameManager>
     void initGUI()
     {
         //init gui programmatically
-        for (int i = 0; i < NUM_TILES_PER_COL; i++)
+        for (int i = 0; i < CELL_PER_ROWS; i++)
         {
-            for (int j = 0; j < NUM_TILES_PER_COL; j++)
+            for (int j = 0; j < CELL_PER_ROWS; j++)
             {
                 //tile cells
                 GameObject cgo = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Cell cell = cgo.AddComponent<Cell>();
-                int id = ((j + 1) + (i * NUM_TILES_PER_COL));
+                int id = ((j + 1) + (i * CELL_PER_ROWS));
                 cell.SetName("Cell" + id);
                 cell.SetId(id - 1);
                 float w = cgo.GetComponent<Renderer>().bounds.size.x;
@@ -260,7 +427,6 @@ public class GameManager : Singleton<GameManager>
                     if (cell != null)
                     {
                         clickcell = cell;
-                        //ccid = cell.id;
                         Debug.Log("-----> " + cell.id);
                     }
                 }
