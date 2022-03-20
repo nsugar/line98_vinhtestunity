@@ -13,6 +13,8 @@ public class Ball : Shape
         {"#8b4513", "Brown" }
     };
 
+    public bool isSmall = false;
+
     void Start()
     {
 
@@ -29,5 +31,11 @@ public class Ball : Shape
         string color = ballHexColorArr[ranNum, 0];
         base.SetColor(color);
         base.SetName(ballHexColorArr[ranNum, 1] + " Ball");
+    }
+
+    public void SetSmall(float size)
+    {
+        this.isSmall = true;
+        base.ScaleSize(size);
     }
 }

@@ -6,6 +6,7 @@ public class Shape : MonoBehaviour
 {
     public float x, y, z;
     public bool isVisible;
+    public int id;
 
     private void Awake()
     {
@@ -46,6 +47,11 @@ public class Shape : MonoBehaviour
         }
     }
 
+    public void SetColor(Color color)
+    {
+        GetComponent<Renderer>().material.color = color;
+    }
+
     public void SetSize(int w, int h, int d)//d:depth
     {
         transform.localScale = new Vector3(w, h, d);
@@ -65,5 +71,10 @@ public class Shape : MonoBehaviour
     {
         GetComponent<Collider>().enabled = able;
         this.isVisible = able;
+    }
+
+    public void SetId(int id)
+    {
+        this.id = id;
     }
 }

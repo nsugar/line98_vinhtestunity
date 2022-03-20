@@ -4,10 +4,7 @@ using UnityEngine;
 
 public class Cell : Shape
 {
-    //public enum CellState { Blank, Fill };
-    //public CellState cellState = CellState.Blank;
-    //public enum CellEventState { Select, Deselect };
-    //public CellEventState cellEventState = CellEventState.Deselect;
+    public Ball ball;
 
     void Start()
     {
@@ -17,5 +14,20 @@ public class Cell : Shape
     void Update()
     {
 
-    }   
+    }
+
+    public void AttachBall(Ball ball)
+    {
+        this.ball = ball;
+    }
+
+    public bool HasBall()
+    {
+        if (ball != null)
+        {
+            return true;
+        }
+
+        return false;
+    }
 }
