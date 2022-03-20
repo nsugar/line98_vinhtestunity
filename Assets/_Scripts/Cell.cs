@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Cell : MonoBehaviour
+public class Cell : Shape
 {
-    public enum CellState{ Blank, Fill };
-    public CellState cellState = CellState.Blank;
-    public enum CellEventState { Select, Deselect };
-    public CellEventState cellEventState = CellEventState.Deselect;
+    //public enum CellState { Blank, Fill };
+    //public CellState cellState = CellState.Blank;
+    //public enum CellEventState { Select, Deselect };
+    //public CellEventState cellEventState = CellEventState.Deselect;
 
     void Start()
     {
@@ -17,5 +17,5 @@ public class Cell : MonoBehaviour
     void Update()
     {
 
-    }
+    }   
 }

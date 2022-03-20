@@ -3,25 +3,26 @@ using UnityEngine;
 
 public class GameManager : Singleton<GameManager>
 {
-    private List<GameObject> cellArr;
-    private List<GameObject> ballArr;
+    private List<Cell> cellArr;
+    private List<Ball> ballArr;
+    private List<int> mapArr;
+    /*
+     * 0:   emtpy
+     * 1:   small ball
+     * 2:   big ball
+     * 3:   user ball-xy choice
+     */
     private const int NUM_TILES_PER_COL = 9;
-    private string[] BallHexColorArr = {
-        "#ff0000",  //red
-        "#0000ff",  //blue
-        "#008000",  //green
-        "#00ffff",  //cyan
-        "#ffff00",  //yellow
-        "#8b4513"   //brown
-    };
 
     public enum GameState { Initial, Standby, NewGame, Playing, GameOver };
-    public GameState gameState = GameState.Initial;
+    public GameState gameState;
 
     void Start()
     {
-        cellArr = new List<GameObject>();
-        ballArr = new List<GameObject>();
+        cellArr = new List<Cell>();
+        ballArr = new List<Ball>();
+        mapArr = new List<int>();
+        gameState = GameState.Initial;
     }
 
     // Update is called once per frame
@@ -37,17 +38,20 @@ public class GameManager : Singleton<GameManager>
         {
             case GameState.Initial:
                 initGUI();
+                gameState = GameState.NewGame;
                 break;
             case GameState.Standby:
                 //waiting for user start
                 break;
             case GameState.NewGame:
                 NewGame();
+                gameState = GameState.Playing;
                 break;
             case GameState.Playing:
                 //process logic
                 break;
             case GameState.GameOver:
+                gameState = GameState.Standby;
                 break;
         }
     }
@@ -60,34 +64,36 @@ public class GameManager : Singleton<GameManager>
     void NewGame()
     {
         //first start => genenate: 7 big balls, 3 small balls
-        for (int i = 0; i < 10; i++)
+        if (ballArr.Count > 0)
         {
-            //balls
-            GameObject ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            ball.GetComponent<Collider>().enabled = false;
-            ball.AddComponent<Ball>().SetBallColor(ball, RandomBallColor());
-
-            //get Cell position
-            GameObject cell = cellArr[RandomBallPosition()];
-            float x = cell.transform.position.x;
-            float y = cell.transform.position.y;
-
-            ball.transform.position = new Vector3(x, y, -5);
-            ball.name = "ball" + (i + 1);
-            ballArr.Add(ball);
-
-            if (i > 6)
+            for (int i = 0; i < 10; i++)
             {
-                ball.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                Ball ball = ballArr[i];
+                ball.SetVisible(true);
+                ball.RandomColor();
+
+                int mpos = RandomFreePositionBallMap();
+                mapArr[mpos] = 2; //2: big ball
+
+                if (i > 6)
+                {
+                    mapArr[mpos] = 1; //1: small ball
+                    ball.ScaleSize(0.5f);
+                }
+
+                Debug.Log("mpos: " + (mpos + 1) + " -- aar: " + mapArr[mpos]);
+
+                Cell cell = cellArr[mpos];
+                ball.MoveToXY(cell.x, cell.y);
             }
         }
-        //SetBallColor(ball, Random.Range(0, 6));
-        gameState = GameState.Playing;
+
+        DebugMap();
     }
 
     void EndTurn()
     {
-
+        //random
     }
 
     void AddNewScore()
@@ -100,18 +106,44 @@ public class GameManager : Singleton<GameManager>
 
     }
 
-    string RandomBallColor()
+    int RandomFreePositionBallMap()
     {
-        return BallHexColorArr[Random.Range(0, 6)];
-    }
-
-    int RandomBallPosition()
-    {
-        if (cellArr.Count > 0)
+        if (mapArr.Count > 0)
         {
-            return Random.Range(0, cellArr.Count);
+            List<int> freeSpaceIndexArr = new List<int>();
+
+            //check free space, avoid duplicating
+            for (int i = 0; i < mapArr.Count; i++)
+            {
+                if (mapArr[i] == 0)
+                {
+                    freeSpaceIndexArr.Add(i);
+                }
+            }
+
+            DebugMap();
+
+            if (freeSpaceIndexArr.Count > 0)
+            {
+                return Random.Range(0, freeSpaceIndexArr.Count);
+            }
         }
         return 0;
+    }
+
+    void DebugMap()
+    {
+        string map = "";
+        for (int i = 0; i < mapArr.Count; i++)
+        {
+            map += mapArr[i] + ", ";
+            if ((i + 1) % 9 == 0)
+            {
+                map += "\n";
+            }
+        }
+
+        Debug.Log(map);
     }
 
     void initGUI()
@@ -122,26 +154,35 @@ public class GameManager : Singleton<GameManager>
             for (int j = 0; j < NUM_TILES_PER_COL; j++)
             {
                 //tile cells
-                GameObject cell = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cell.name = "cell" + ((j + 1) + (i * NUM_TILES_PER_COL));
-                float w = cell.GetComponent<Renderer>().bounds.size.x;
-                float h = cell.GetComponent<Renderer>().bounds.size.y;
+                GameObject cgo = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Cell cell = cgo.AddComponent<Cell>();
+                cell.SetName("Cell" + ((j + 1) + (i * NUM_TILES_PER_COL)));
+                float w = cgo.GetComponent<Renderer>().bounds.size.x;
+                float h = cgo.GetComponent<Renderer>().bounds.size.y;
                 float x = (w * (j * 1.1f)) + 1;
                 float y = (h * (i * 1.1f)) + 1;
-                cell.transform.position = new Vector3(x, y, 0);
+                cell.SetPosition(x, y, 0);
+                cell.SetClickAble(true);
                 cellArr.Add(cell);
+
+                //balls
+                GameObject bgo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Ball ball = bgo.AddComponent<Ball>();
+                ball.SetName("Ball");
+                ball.SetPosition(-5, -5, -5);
+                ball.SetVisible(false);
+                ballArr.Add(ball);
+
+                mapArr.Add(0);//first time empty
             }
         }
 
-        GameObject boardBg = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        boardBg.name = "BoardBg";
-        boardBg.GetComponent<Renderer>().material.color = Color.grey;
-        boardBg.transform.position = new Vector3(5, 5, 10);
-        boardBg.transform.localScale += new Vector3(20, 20, 1);
-        boardBg.GetComponent<Collider>().enabled = false;
-
-        //gameState = GameState.Standby;
-        gameState = GameState.NewGame;
+        GameObject bggo = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Cell bg = bggo.AddComponent<Cell>();
+        bg.SetName("BoardBg");
+        bg.SetColor("#595959");
+        bg.SetPosition(5, 5, 10);
+        bg.SetSize(20, 20, 1);
     }
 
     void InputHandler()
@@ -180,4 +221,3 @@ public class GameManager : Singleton<GameManager>
 #endif
     }
 }
-
